@@ -2,12 +2,13 @@ package com.zlc.bean;
 
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 @Component
 public class TestBean {
 	@Autowired
-	TestBeanAutowired testBean;
+	TestBeanAutowired testBeanAutowired;
 
 	private String name = "hehe";
 
@@ -16,7 +17,7 @@ public class TestBean {
 	}
 
 	public TestBean() {
-		System.out.println("哈哈");
+		System.out.println("construct 实例化");
 	}
 
 	@Override
@@ -27,7 +28,7 @@ public class TestBean {
 	}
 
 	public String getName() {
-		System.out.println(testBean.getName());
+		System.out.println(testBeanAutowired.getName());
 		return name;
 	}
 

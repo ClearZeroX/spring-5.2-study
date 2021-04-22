@@ -516,41 +516,58 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	@Override
 	public void refresh() throws BeansException, IllegalStateException {
 		synchronized (this.startupShutdownMonitor) {
-			// Prepare this context for refreshing.
+			// 1、Prepare this context for refreshing.
 			prepareRefresh();
 
-			// Tell the subclass to refresh the internal bean factory.
+			// 2、Tell the subclass to refresh the internal bean factory.
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
-			// Prepare the bean factory for use in this context.
+			// 3、Prepare the bean factory for use in this context.
 			prepareBeanFactory(beanFactory);
 
 			try {
-				// Allows post-processing of the bean factory in context subclasses.
+				// 4、Allows post-processing of the bean factory in context subclasses.
 				postProcessBeanFactory(beanFactory);
 
-				// Invoke factory processors registered as beans in the context.
+				// 5、Invoke factory processors registered as beans in the context.
+				// 执行BeanFactoryPostProcessor中的postProcessorBeanFactory(实例化之前执行)
+				//  	通过beanFactory.getBeanNamesForType(BeanFactoryPostProcessor.class, true, false),
+				//  	获取spring配置文件中定义的所有实现BeanFactoryPostProcessor接口的bean, 然后根据优先级进行排序,
+				//  	之后对于每个BeanFactoryPostProcessor, 调用postProcessBeanFactory方法。
 				invokeBeanFactoryPostProcessors(beanFactory);
 
-				// Register bean processors that intercept bean creation.
+				// 6、Register bean processors that intercept bean creation.
+				// 注册所有实现BeanPostProcessor接口的bean
+				// 		注册: beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false)
+				//  	但是不执行: postProcessBeforeInitialization()、postProcessAfterInitialization()方法
+				// 单例、非lazy、非抽象类的初始化是在11步执行的, prototype的则是在getBean时执行的
 				registerBeanPostProcessors(beanFactory);
 
-				// Initialize message source for this context.
+				// 7、Initialize message source for this context.
 				initMessageSource();
 
-				// Initialize event multicaster for this context.
+				// 8、Initialize event multicaster for this context.
 				initApplicationEventMulticaster();
 
-				// Initialize other special beans in specific context subclasses.
+				// 9、Initialize other special beans in specific context subclasses.
 				onRefresh();
 
-				// Check for listener beans and register them.
+				// 10、Check for listener beans and register them.
 				registerListeners();
 
-				// Instantiate all remaining (non-lazy-init) singletons.
+				// 11、Instantiate all remaining (non-lazy-init) singletons.
+				// 初始化单例、非抽象、非懒加载的bean
+				// 		DefaultListableBeanFactory.preInstantiateSingletons()方法对上面三种bean进行判断, 然后调用getBean()
+				// 		getBean()中完成初始化(循环依赖应该就是整个过程中完成的)
+				// 		getBean()方法中，最终调用AbstractAutowireCapableBeanFactory.doCreateBean方法
+				//		doCreateBean方法, 首先调用createBeanInstance方法，创建bean实例对象(这个时候执行bean的构造方法),
+				// 			然后调用populateBean方法, 对bean进行填充, 注入相关依赖, 之后再调用方法initializeBean, 进行相关初始化工作
+				// 				populateBean() 好像是和循环依赖也有关系
+				//				initializeBean() 方法调用postProcessBeforeInitialization()、初始化方法、postProcessAfterInitialization()完成初始化
+				// 					上面三个方法debug时好像有点问题 TODO z
 				finishBeanFactoryInitialization(beanFactory);
 
-				// Last step: publish corresponding event.
+				// 12、Last step: publish corresponding event.
 				finishRefresh();
 			}
 
@@ -876,6 +893,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.freezeConfiguration();
 
 		// Instantiate all remaining (non-lazy-init) singletons.
+		// 准备初始化单例bean(进行一些相关判断)
 		beanFactory.preInstantiateSingletons();
 	}
 
