@@ -517,9 +517,22 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	public void refresh() throws BeansException, IllegalStateException {
 		synchronized (this.startupShutdownMonitor) {
 			// 1、Prepare this context for refreshing.
+			/**
+			 * 1、prepareRefresh()
+			 * 设置Spring容器的启动时间，
+			 * 开启活跃状态，撤销关闭状态，。
+			 * 初始化context environment（上下文环境）中的占位符属性来源。
+			 * 验证环境信息里一些必须存在的属性
+			 */
 			prepareRefresh();
 
 			// 2、Tell the subclass to refresh the internal bean factory.
+			/**
+			 * 2、ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
+			 * 	让这个类（AbstractApplicationContext）的子类刷新内部bean工厂, 返回DefaultListableBeanFactory类型BeanFactory
+			 * 		GenericApplicationContext容器(实现)：获取创建容器时就创建的bean工厂，并且设置工厂的ID.
+			 * 		AbstractRefreshableApplicationContext容器：实际上就是重新创建一个bean工厂，并设置工厂的一些属性。
+			 */
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			// 3、Prepare the bean factory for use in this context.
@@ -615,7 +628,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 
 		// Initialize any placeholder property sources in the context environment.
-		initPropertySources();
+		initPropertySources();// 初始化context environment(上下文环境)中的占位符属性来源, 默认没有实现, 由子类实现
 
 		// Validate that all properties marked as required are resolvable:
 		// see ConfigurablePropertyResolver#setRequiredProperties
@@ -663,12 +676,18 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 */
 	protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 		// Tell the internal bean factory to use the context's class loader etc.
+		// 设置beanFactory的类加载器
 		beanFactory.setBeanClassLoader(getClassLoader());
+		// 设置支持表达式解析器, spel, #{}等符号
 		beanFactory.setBeanExpressionResolver(new StandardBeanExpressionResolver(beanFactory.getBeanClassLoader()));
+		// 设置定制的解析器?
 		beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
 		// Configure the bean factory with context callbacks.
+		// 添加部分BeanPostProcessor【ApplicationContextAwareProcessor】
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
+		// 设置忽略的自动装配的接口EnvironmentAware、EmbeddedValueResolverAware、xx,
+		// 因为ApplicationContextAwareProcessor#invokeAwareInterfaces已经把这5个接口的实现工作做了
 		beanFactory.ignoreDependencyInterface(EnvironmentAware.class);
 		beanFactory.ignoreDependencyInterface(EmbeddedValueResolverAware.class);
 		beanFactory.ignoreDependencyInterface(ResourceLoaderAware.class);
